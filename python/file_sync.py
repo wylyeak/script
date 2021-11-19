@@ -3,7 +3,7 @@ import os
 import shelve
 import time
 
-import humanize
+from humanize.filesize import naturalsize
 
 exclude = ['/.DS_Store', '/.localized', '/desktop.ini', '$RECYCLE.BIN', '@eaDir']
 
@@ -16,7 +16,7 @@ source_dir = args.source
 target = args.target
 
 MAX_SIZE = 15 * 1024 * 1024 * 1024
-print("MAX_SIZE  = ", humanize.filesize.naturalsize(MAX_SIZE, gnu=True))
+print("MAX_SIZE  = ", naturalsize(MAX_SIZE, gnu=True))
 
 
 def check_exclude(f):
@@ -50,9 +50,10 @@ def get_dir_size(top):
 
 
 def try_sync():
+    linked_size = 0
     size = get_dir_size(target)
     if size > MAX_SIZE:
-        print("【INFO】{} sleep 3600s".format(humanize.filesize.naturalsize(size, gnu=True)))
+        print("【INFO】{} sleep 3600s".format(naturalsize(size, gnu=True)))
         time.sleep(3600)
         return False
     for root, dirs, files in os.walk(source_dir, topdown=False, onerror=walk_error_handler):
@@ -64,20 +65,28 @@ def try_sync():
             f = os.path.join(root, f)
             if check_exclude(f):
                 print("【INFO】ignore {}".format(f))
+            f_size = os.path.getsize(f)
             if check_file(f):
-                print("【INFO】skip  {}".format(f))
+                linked_size += f_size
+                print(
+                    "【INFO】skip  {} {} linked:{}".format(f, naturalsize(f_size, gnu=True),
+                                                         naturalsize(linked_size, gnu=True)))
                 pass
             else:
                 tf = "{}".format(f).replace(source_dir, target)
                 os.makedirs(os.path.dirname(tf), exist_ok=True)
                 os.link(f, tf)
-                size += os.path.getsize(f)
+                size += f_size
+                linked_size += f_size
                 put_file_flag(f)
-                print("【INFO】link {} {}".format(f, humanize.filesize.naturalsize(size, gnu=True)))
+                print(
+                    "【INFO】link f:{} f_size:{} dest:{} linked:{}".format(f, naturalsize(f_size, gnu=True),
+                                                                         naturalsize(size, gnu=True),
+                                                                         naturalsize(linked_size, gnu=True)))
                 if size > MAX_SIZE:
                     return False
         pass
-    print("【INFO】 {}".format(humanize.filesize.naturalsize(size, gnu=True)))
+    print("【INFO】 dest:{} linked:{}".format(naturalsize(size, gnu=True), naturalsize(linked_size, gnu=True)))
     return True
 
 
