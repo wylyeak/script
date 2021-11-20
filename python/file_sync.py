@@ -5,7 +5,7 @@ import time
 
 from humanize.filesize import naturalsize
 
-exclude = ['/.DS_Store', '/.localized', '/desktop.ini', '$RECYCLE.BIN', '@eaDir']
+exclude = ['/.DS_Store', '/.localized', '/desktop.ini', '$RECYCLE.BIN', '@eaDir', '/Thumbs.db']
 
 parser = argparse.ArgumentParser(description='-s source_dir -t target_dir')
 parser.add_argument('-s', '--source', required=True)
@@ -75,7 +75,11 @@ def try_sync():
             else:
                 tf = "{}".format(f).replace(source_dir, target)
                 os.makedirs(os.path.dirname(tf), exist_ok=True)
-                os.link(f, tf)
+                try:
+                    os.link(f, tf)
+                except FileExistsError as fee:
+                    print("{} {} {}".format(f, tf, fee))
+                    pass
                 size += f_size
                 linked_size += f_size
                 put_file_flag(f)
