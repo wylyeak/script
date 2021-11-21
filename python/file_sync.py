@@ -1,9 +1,12 @@
 import argparse
 import os
 import shelve
+import threading
 import time
 
 from humanize.filesize import naturalsize
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 exclude = ['/.DS_Store', '/.localized', '/desktop.ini', '$RECYCLE.BIN', '@eaDir', '/Thumbs.db']
 
@@ -14,6 +17,8 @@ args = parser.parse_args()
 
 source_dir = args.source
 target = args.target
+
+condition = threading.Condition()
 
 MAX_SIZE = 15 * 1024 * 1024 * 1024
 print("MAX_SIZE  = ", naturalsize(MAX_SIZE, gnu=True))
@@ -49,13 +54,9 @@ def get_dir_size(top):
     return size
 
 
-def try_sync():
+def try_sync(init_size):
     linked_size = 0
-    size = get_dir_size(target)
-    if size > MAX_SIZE:
-        print("【INFO】{} sleep 3600s".format(naturalsize(size, gnu=True)))
-        time.sleep(3600)
-        return False
+    size = init_size
     for root, dirs, files in os.walk(source_dir, topdown=False, onerror=walk_error_handler):
         root = os.path.abspath(root)
         if check_exclude(root):
@@ -94,14 +95,36 @@ def try_sync():
     return True
 
 
+class EventHandler(FileSystemEventHandler):
+    def on_deleted(self, event):
+        super().on_deleted(event)
+        what = 'directory' if event.is_directory else 'file'
+        print("【INFO】Deleted {}: {}".format(what, event.src_path))
+        condition.notifyAll()
+
+
+event_handler = EventHandler()
+observer = Observer()
+observer.schedule(event_handler, target, recursive=True)
+observer.start()
+
 home_dir = os.path.expanduser("~")
 db_file = os.path.join(home_dir, "shelve")
 db = shelve.open(db_file)
 
 try:
     while True:
-        if try_sync():
+        _size = get_dir_size(target)
+        if _size > MAX_SIZE:
+            print("【INFO】 wait for notify {}".format(naturalsize(_size, gnu=True)))
+            condition.wait()
+            print("【INFO】notify sleep 5m for sync")
+            time.sleep(5 * 60)
+            continue
+        if try_sync(_size):
             break
 except KeyboardInterrupt:
-    db.close()
     pass
+db.close()
+observer.stop()
+observer.join()
