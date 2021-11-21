@@ -97,10 +97,10 @@ def try_sync(init_size):
 
 class EventHandler(FileSystemEventHandler):
     def on_deleted(self, event):
+        super().on_deleted(event)
+        what = 'directory' if event.is_directory else 'file'
+        print("【INFO】Deleted {}: {}".format(what, event.src_path))
         with condition:
-            super().on_deleted(event)
-            what = 'directory' if event.is_directory else 'file'
-            print("【INFO】Deleted {}: {}".format(what, event.src_path))
             condition.notifyAll()
 
 
@@ -115,16 +115,16 @@ db = shelve.open(db_file)
 
 try:
     while True:
-        with condition:
-            _size = get_dir_size(target)
-            if _size > MAX_SIZE:
-                print("【INFO】 wait for notify {}".format(naturalsize(_size, gnu=True)))
+        _size = get_dir_size(target)
+        if _size > MAX_SIZE:
+            print("【INFO】 wait for notify {}".format(naturalsize(_size, gnu=True)))
+            with condition:
                 condition.wait()
-                print("【INFO】notify sleep 5m for sync")
-                time.sleep(5 * 60)
-                continue
-            if try_sync(_size):
-                break
+            print("【INFO】notify sleep 5m for sync")
+            time.sleep(5 * 60)
+            continue
+        if try_sync(_size):
+            break
 except KeyboardInterrupt:
     pass
 db.close()
