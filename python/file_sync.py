@@ -19,7 +19,7 @@ source_dir = args.source
 target = args.target
 
 MAX_SIZE = 15 * 1024 * 1024 * 1024
-print("MAX_SIZE  = ", naturalsize(MAX_SIZE, gnu=True))
+print("MAX_SIZE  = ", naturalsize(MAX_SIZE))
 
 
 def check_exclude(f):
@@ -68,8 +68,8 @@ def try_sync(init_size):
             if check_file(f):
                 linked_size += f_size
                 print(
-                    "【INFO】skip  {} {} linked:{}".format(f, naturalsize(f_size, gnu=True),
-                                                         naturalsize(linked_size, gnu=True)))
+                    "【INFO】skip  {} {} linked:{}".format(f, naturalsize(f_size),
+                                                         naturalsize(linked_size)))
                 pass
             else:
                 tf = "{}".format(f).replace(source_dir, target)
@@ -83,13 +83,13 @@ def try_sync(init_size):
                 linked_size += f_size
                 put_file_flag(f)
                 print(
-                    "【INFO】link f:{} f_size:{} dest:{} linked:{}".format(f, naturalsize(f_size, gnu=True),
-                                                                         naturalsize(size, gnu=True),
-                                                                         naturalsize(linked_size, gnu=True)))
+                    "【INFO】link f:{} f_size:{} dest:{} linked:{}".format(f, naturalsize(f_size),
+                                                                         naturalsize(size),
+                                                                         naturalsize(linked_size)))
                 if size > MAX_SIZE:
                     return False
         pass
-    print("【INFO】 dest:{} linked:{}".format(naturalsize(size, gnu=True), naturalsize(linked_size, gnu=True)))
+    print("【INFO】 dest:{} linked:{}".format(naturalsize(size), naturalsize(linked_size)))
     return True
 
 
@@ -135,7 +135,7 @@ try:
     while True:
         _size = get_dir_size(target)
         if _size > MAX_SIZE:
-            print("【INFO】target full wait for notify {}".format(naturalsize(_size, gnu=True)))
+            print("【INFO】target full wait for notify {}".format(naturalsize(_size)))
             with target_condition:
                 target_condition.wait()
             print("【INFO】target change sleep 5m for sync")
@@ -143,7 +143,7 @@ try:
             continue
         if try_sync(_size):
             with source_condition:
-                print("【INFO】full sync wait for notify {}".format(naturalsize(_size, gnu=True)))
+                print("【INFO】full sync wait for notify {}".format(naturalsize(_size)))
                 source_condition.wait()
                 print("【INFO】source change sleep 5m for sync")
             time.sleep(5 * 60)
