@@ -101,7 +101,7 @@ class EventHandler(FileSystemEventHandler):
         pass
 
     def on_created(self, event):
-        if "on_created" in self.event_types:
+        if "on_created" in self.event_types and not check_exclude(event.src_path):
             super().on_created(event)
             what = 'directory' if event.is_directory else 'file'
             print("【INFO】on_created {}: {}".format(what, event.src_path))
@@ -135,15 +135,17 @@ try:
     while True:
         _size = get_dir_size(target)
         if _size > MAX_SIZE:
-            print("【INFO】 wait for notify {}".format(naturalsize(_size, gnu=True)))
+            print("【INFO】target full wait for notify {}".format(naturalsize(_size, gnu=True)))
             with target_condition:
                 target_condition.wait()
-            print("【INFO】notify sleep 5m for sync")
+            print("【INFO】target change sleep 5m for sync")
             time.sleep(5 * 60)
             continue
         if try_sync(_size):
             with source_condition:
+                print("【INFO】full sync wait for notify {}".format(naturalsize(_size, gnu=True)))
                 source_condition.wait()
+                print("【INFO】source change sleep 5m for sync")
             time.sleep(5 * 60)
 except KeyboardInterrupt:
     pass
