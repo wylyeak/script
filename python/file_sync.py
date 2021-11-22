@@ -18,8 +18,6 @@ args = parser.parse_args()
 source_dir = args.source
 target = args.target
 
-condition = threading.Condition()
-
 MAX_SIZE = 15 * 1024 * 1024 * 1024
 print("MAX_SIZE  = ", naturalsize(MAX_SIZE, gnu=True))
 
@@ -96,17 +94,37 @@ def try_sync(init_size):
 
 
 class EventHandler(FileSystemEventHandler):
+
+    def __init__(self, conn, *event_types):
+        self.event_types = event_types
+        self.conn = conn
+        pass
+
+    def on_created(self, event):
+        if "on_created" in self.event_types:
+            super().on_created(event)
+            what = 'directory' if event.is_directory else 'file'
+            print("【INFO】on_created {}: {}".format(what, event.src_path))
+            with self.conn:
+                self.conn.notifyAll()
+
     def on_deleted(self, event):
-        super().on_deleted(event)
-        what = 'directory' if event.is_directory else 'file'
-        print("【INFO】Deleted {}: {}".format(what, event.src_path))
-        with condition:
-            condition.notifyAll()
+        if "on_deleted" in self.event_types:
+            super().on_deleted(event)
+            what = 'directory' if event.is_directory else 'file'
+            print("【INFO】on_deleted {}: {}".format(what, event.src_path))
+            with self.conn:
+                self.conn.notifyAll()
 
 
-event_handler = EventHandler()
+target_condition = threading.Condition()
+source_condition = threading.Condition()
+
+target_handler = EventHandler(target_condition, "on_deleted")
+source_handler = EventHandler(source_condition, "on_created")
 observer = Observer()
-observer.schedule(event_handler, target, recursive=True)
+observer.schedule(target_handler, target, recursive=True)
+observer.schedule(source_handler, source_dir, recursive=True)
 observer.start()
 
 home_dir = os.path.expanduser("~")
@@ -118,13 +136,15 @@ try:
         _size = get_dir_size(target)
         if _size > MAX_SIZE:
             print("【INFO】 wait for notify {}".format(naturalsize(_size, gnu=True)))
-            with condition:
-                condition.wait()
+            with target_condition:
+                target_condition.wait()
             print("【INFO】notify sleep 5m for sync")
             time.sleep(5 * 60)
             continue
         if try_sync(_size):
-            break
+            with source_condition:
+                source_condition.wait()
+            time.sleep(5 * 60)
 except KeyboardInterrupt:
     pass
 db.close()
