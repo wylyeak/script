@@ -13,10 +13,12 @@ exclude = ['/.DS_Store', '/.localized', '/desktop.ini', '$RECYCLE.BIN', '@eaDir'
 parser = argparse.ArgumentParser(description='-s source_dir -t target_dir')
 parser.add_argument('-s', '--source', required=True)
 parser.add_argument('-t', '--target', required=True)
+parser.add_argument('-d', '--database', required=True)
 args = parser.parse_args()
 
 source_dir = args.source
 target = args.target
+database = args.database
 
 MAX_SIZE = 15 * 1024 * 1024 * 1024
 print("MAX_SIZE  = ", naturalsize(MAX_SIZE))
@@ -127,9 +129,7 @@ observer.schedule(target_handler, target, recursive=True)
 observer.schedule(source_handler, source_dir, recursive=True)
 observer.start()
 
-home_dir = os.path.expanduser("~")
-db_file = os.path.join(home_dir, "shelve")
-db = shelve.open(db_file)
+db = shelve.open(database)
 
 try:
     while True:
