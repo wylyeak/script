@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# encoding: utf-8
 import argparse
 import os
 import shelve
