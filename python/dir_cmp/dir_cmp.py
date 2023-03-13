@@ -18,6 +18,8 @@ quiet = args.quiet
 
 
 def check_sha256(filename1, filename2):
+    if os.path.samefile(filename1, filename2):
+        return True
     h1 = get_sha256(filename1)
     h2 = get_sha256(filename2)
     return h1 == h2
