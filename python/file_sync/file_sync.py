@@ -86,15 +86,16 @@ def try_sync(init_size):
     size = init_size
     total_linked_num = 0
     curr_link_num = 0
-    for root, dirs, files in os.walk(source_dir, topdown=False, onerror=walk_error_handler):
+    for root, dirs, files in os.walk(source_dir, topdown=True, onerror=walk_error_handler):
         root = os.path.abspath(root)
         if check_exclude(root):
-            logger.info("ignore {}".format(root))
+            logger.info("ignore root={}".format(root))
             continue
         for f in files:
             f = os.path.join(root, f)
             if check_exclude(f):
-                logger.info("ignore {}".format(f))
+                logger.info("ignore file={}".format(f))
+                continue
             f_size = os.path.getsize(f)
             if check_file(f):
                 total_linked_size += f_size
