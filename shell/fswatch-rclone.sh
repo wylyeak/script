@@ -20,11 +20,13 @@ PID="$$"
 
 LOCAL_PATH=""
 TARGET=""
+VERBOSE=""
 
-while getopts "s:t:h" OPT; do
+while getopts "s:t:hv" OPT; do
   case $OPT in
   s) LOCAL_PATH=$OPTARG ;;
   t) TARGET=$OPTARG ;;
+  v) VERBOSE="--verbose" ;;
   h)
     usage
     exit 0
@@ -50,9 +52,12 @@ echo "Local source path:  \"$LOCAL_PATH\""
 echo "Remote target path: \"$TARGET\""
 echo ""
 
+# first sync
+rclone -v -P sync $LOCAL_PATH $TARGET
+
 # Watch for changes and sync (exclude hidden files)
 echo "Watching for changes. Quit anytime with Ctrl-C."
-fswatch -o -r -l $LATENCY $LOCAL_PATH |
+fswatch -o -r $VERBOSE -l $LATENCY $LOCAL_PATH |
   while read -r line; do
     rclone -v -P sync $LOCAL_PATH $TARGET
   done
