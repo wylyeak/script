@@ -18,16 +18,57 @@ logger = logging.getLogger()
 exclude = ['/.DS_Store', '/.localized', '/desktop.ini', '$RECYCLE.BIN', '@eaDir', '/Thumbs.db']
 
 parser = argparse.ArgumentParser(description='-s source_dir -t target_dir')
-parser.add_argument('-s', '--source', required=True)
-parser.add_argument('-t', '--target', required=True)
+parser.add_argument('-m', '--mode', required=True, default='sync')
+parser.add_argument('-f', '--filter', required=False)
+parser.add_argument('-rm', '--rm', required=False, default=False, action="store_true")
 parser.add_argument('-d', '--database', required=True)
+parser.add_argument('-s', '--source', required=False)
+parser.add_argument('-t', '--target', required=False)
 parser.add_argument('-n', '--dry', required=False, default=False, action="store_true")
 parser.add_argument('-pk', '--push_key', required=False)
 args = parser.parse_args()
 
+mode = args.mode
+database = args.database
+filterKey = args.filter
+rm = args.rm
+db = shelve.open(database)
+
+
+def filter_keys():
+    keys = []
+    for key in db:
+        if not filterKey or filterKey in key:
+            keys.append(key)
+    return keys
+
+
+def rm_keys():
+    rm_size = 0
+    for k in filter_keys():
+        if rm:
+            db.pop(k, None)
+            rm_size += 1
+        print("{} del:{}".format(k, rm))
+        pass
+    return rm_size
+
+
+if mode == "db":
+    size = len(db)
+    s = rm_keys()
+    print("dbSize:{} rmSize:{} nowSize:{}".format(size, s, len(db)))
+    db.close()
+    exit(0)
+    pass
+
 source_dir = args.source
 target = args.target
-database = args.database
+
+if not source_dir or not target:
+    parser.print_help()
+    exit(1)
+
 debug = args.dry
 push_key = args.push_key
 
@@ -168,8 +209,6 @@ observer = Observer()
 observer.schedule(target_handler, target, recursive=True)
 observer.schedule(source_handler, source_dir, recursive=True)
 observer.start()
-
-db = shelve.open(database)
 
 try:
     while True:
