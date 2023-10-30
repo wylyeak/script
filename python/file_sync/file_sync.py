@@ -45,7 +45,12 @@ def filter_keys():
 
 def rm_keys():
     rm_size = 0
-    for k in filter_keys():
+    f_keys = filter_keys()
+    if rm:
+        user_input = input('Confirm? [Y/N] dbSize:{} rmSize:{}'.format(len(db), len(f_keys)))
+        if user_input.lower() != 'y':
+            exit(0)
+    for k in f_keys:
         if rm:
             db.pop(k, None)
             rm_size += 1
