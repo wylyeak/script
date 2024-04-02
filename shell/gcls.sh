@@ -71,7 +71,7 @@ for ((i = 0; i < ${#EXCLUDE_BRANCH[@]}; i++)); do
   fi
 done
 
-MERGED_BRANCH=$(git br --merged "$DIFF_BRANCH" | grep -v "\*" | grep -v -E "$EXCLUDE_BRANCH_REGEX")
+MERGED_BRANCH=$(git br --merged "$DIFF_BRANCH" | grep -v -E "\*|\+" | grep -v -E "$EXCLUDE_BRANCH_REGEX")
 
 if [[ -z "$MERGED_BRANCH" ]]; then
   echo "[INFO] Local Branch is Clean For $DIFF_BRANCH"
